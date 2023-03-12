@@ -7,6 +7,8 @@
 #define SERIAL Serial
 #endif
 
+#define aref_voltage 3.3                                        //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
+
 float coulomb = 0, mAh = 0, percent = 0;
 
 void setup(void){
@@ -21,6 +23,8 @@ void setup(void){
     pinMode(PIN, OUTPUT);
     int PIN = 10;
     analogWrite(PIN, 232);
+
+    int tempPin = A1;                                           //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
 }
 void loop(void){
     coulomb = ltc2941.getCoulombs();
@@ -34,4 +38,10 @@ void loop(void){
     SERIAL.print("%");
     SERIAL.println();
     delay(1000);
+}
+
+float getBatteryTemp(){
+    int tempReading = analogRead(tempPin);                      //Reads in and converts TMP36's Vout to int between 0-1023
+    float tempVoltage = tempReading * aref_voltage / 1023.0;    //Converts Vout from int to voltage between 0-3.3V
+    float tempC = (tempVoltage - 0.5) * 100;                    //Converts voltage to °C with 10mV/°C and 500mV offset
 }
