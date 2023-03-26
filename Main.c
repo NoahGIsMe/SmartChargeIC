@@ -1,6 +1,7 @@
-//Main
-
+#include <RTClib.h>
+#include <Wire.h>
 #include "LTC2941.h"
+
 #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
 #define SERIAL SerialUSB
 #else
@@ -11,11 +12,19 @@
 
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
 
+RTC_DS1307 rtc;                                                     //Declares RTC object
+DateTime currentTime;
+uint8_t alarmHour;
+uint8_t alarmMinute;
+bool isPM;
+uint8_t alarmHourDiff;
+uint8_t alarmMinuteDiff;
+
 float coulomb = 0
 float mAh = 0
 float percent = 0;
 float prevBatteryTemp = 0;
-float currentBatteryTemp = 0;
+//float currentBatteryTemp = 0;
 int dutyCycle = 0;
 int dutyCycleTempLoss = 0;                                          //Stores duty cycle decrease due to temperature limit
 
@@ -36,6 +45,10 @@ void setup(void) {
     interrupts();                                                   //Enables all interrupts
 
     Wire.begin();
+    while (!rtc.begin());                                           //Test for successful connection to DS1307
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));                 //Sets RTC to the date & time on the computer when sketch was compiled
+
+    //Wire.begin();
     SERIAL.begin(115200);
     while (!SERIAL.available());
     SERIAL.println("LTC2941 Raw Data");
@@ -51,15 +64,18 @@ void setup(void) {
 }
 
 ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
-    currentBatteryTemp = getBatteryTemp();                          //Reads current battery temperature
+    //currentBatteryTemp = getBatteryTemp();                        //Reads current battery temperature
+    int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
+    float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
+    float currentBatteryTemp = (tempVoltage - 0.5) * 100;           //Converts voltage to °C with 10mV/°C and 500mV offset
     if (currentBatteryTemp > 45) {
         if (currentBatteryTemp >= prevBatteryTemp) {                //If battery temp exceeds 45°C limit and is not decreasing
-            analogWrite(PWMpin, dutyCycle - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
+            //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
         }
     }
     else {
         if (dutyCycleTempLoss > 0) {                                //If battery temp is under 45°C limit and duty cycle has been temporarily decreased
-            analogWrite(PWMpin, dutyCycle - --dutyCycleTempLoss);   //Increase duty cycle until it is reaches normal values
+            //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - --dutyCycleTempLoss);   //Increase duty cycle until it is reaches normal values
         }
     }
     prevBatteryTemp = currentBatteryTemp;
@@ -78,12 +94,15 @@ void loop(void) {
     SERIAL.println();
     delay(1000);
 
-
+    //if (setAlarmButton.pressed)
+        currentTime = RTC.now;
+        alarmHourDiff = (alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0);
+        alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
 }
 
-float getBatteryTemp(){
-    int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
-    float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
-    float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
-    return tempC;
-}
+// float getBatteryTemp(){
+//     int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
+//     float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
+//     float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
+//     return tempC;
+// }
