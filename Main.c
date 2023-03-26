@@ -3,14 +3,15 @@
 #include "LTC2941.h"
 
 #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
-#define SERIAL SerialUSB
+    #define Serial SerialUSB
 #else
-#define SERIAL Serial
+    #define Serial Serial
 #endif
 
 #define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
 
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
+int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
 
 RTC_DS1307 rtc;                                                     //Declares RTC object
 DateTime currentTime;
@@ -20,8 +21,8 @@ bool isPM;
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
 
-float coulomb = 0
-float mAh = 0
+//float coulomb = 0;
+float mAh = 0;
 float percent = 0;
 float prevBatteryTemp = 0;
 //float currentBatteryTemp = 0;
@@ -48,19 +49,11 @@ void setup(void) {
     while (!rtc.begin());                                           //Test for successful connection to DS1307
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));                 //Sets RTC to the date & time on the computer when sketch was compiled
 
-    //Wire.begin();
-    SERIAL.begin(115200);
-    while (!SERIAL.available());
-    SERIAL.println("LTC2941 Raw Data");
+    Serial.begin(115200);
+    while (!Serial.available());
+    //Serial.println("LTC2941 Raw Data");
     ltc2941.initialize();
-    ltc2941.setBatteryFullMAh(1050);
-    int PIN = 10;
-    //Serial.begin(9600);
-    pinMode(PIN, OUTPUT);
-    int PIN = 10;
-    analogWrite(PIN, 232);
-
-    int tempPin = A1;                                               //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
+    ltc2941.setBatteryFullMAh(1000);
 }
 
 ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
@@ -82,16 +75,16 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
 }
 
 void loop(void) {
-    coulomb = ltc2941.getCoulombs();
+    //coulomb = ltc2941.getCoulombs();
     mAh = ltc2941.getmAh();
     percent = ltc2941.getPercent();
-    SERIAL.print(coulomb);
-    SERIAL.print("C,");
-    SERIAL.print(mAh);
-    SERIAL.print("mAh,");
-    SERIAL.print(percent);
-    SERIAL.print("%");
-    SERIAL.println();
+    // Serial.print(coulomb);
+    // Serial.print("C,");
+    // Serial.print(mAh);
+    // Serial.print("mAh,");
+    // Serial.print(percent);
+    // Serial.print("%");
+    // Serial.println();
     delay(1000);
 
     //if (setAlarmButton.pressed)
