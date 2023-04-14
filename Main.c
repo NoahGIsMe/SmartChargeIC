@@ -9,7 +9,8 @@
     #define Serial Serial
 #endif
 
-#define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
+#define aref_voltage 3.3    //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
+#define sensorPin A0
 
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
 int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
@@ -38,7 +39,7 @@ uint8_t alarmMinuteDiff;
 void setup(void) {
     TCCR0B = TCCR0B & B11111000 | B00000010;                        //Sets PWM switching frequency to 7812.5Hz for pins 4/13
     pinMode(PWMpin, OUTPUT);
-
+    analogReference(EXTERNAL);                                      //Need to set aref_voltage to 3.3V
     noInterrupts();                                                 //Temporarily disables all interrupts
     TCCR1A = 0;                                                     //Initializes 16-bit Timer1
     TCCR1B = 0;
@@ -140,9 +141,11 @@ void setAlarm() {
     //draw toggle button/circle (+ alarmSet * ~50pixelOffset)
 }
 
-// float getBatteryTemp() {
-//     int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
-//     float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
-//     float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
-//     return tempC;
-// }
+void getBatteryTemp(void) {
+    int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
+    float tempVoltage = (tempReading * aref_voltage) / 1024.0;      //Converts Vout from int to voltage between 0-3.3V
+    float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
+    Serial.print(tempC);
+    return tempC;
+    delay(1000);
+}
