@@ -1,4 +1,3 @@
-//This is the test file for the LCD screen, will test outputs
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
@@ -17,6 +16,10 @@
 //Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 // If using the breakout, change pins as desired
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+//text size 1 = 7 pixels max
+//text size 2 = 14
+//text size n = 7*n
 
 void setup() {
   // put your setup code here, to run once:
@@ -42,14 +45,20 @@ void setup() {
   tft.fillScreen(ILI9341_WHITE);
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(3);
+
+  //sets screen orientation to portrait
   uint8_t rotation = 0;
-  //for(uint8_t rotation = 0; rotation<4; rotation ++){
+
+  //prints the Title
   tft.setRotation(rotation);
   tft.setCursor(0, 20);
   tft.print("SmartChargeIC");
+
+  //prompts user for charge speed preference
   tft.setTextSize(2);
   tft.println("\n\nPlease select charge speed");
   
+  //prints the charge slider
   tft.setTextSize(1);
   tft.setCursor(20, 90);
   tft.print("Slow");
@@ -58,30 +67,22 @@ void setup() {
   tft.drawRect(20, 100, 200, 30, ILI9341_BLACK); //draws a black rectangle to outline where the 
   tft.fillRect(20,100,100,30,ILI9341_GREEN);
   tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
+
+  //Print Maximum charge setting
+  tft.setCursor(0,175);
+  
+  tft.print("Maximum Charge");
+
+  // tft.fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  // uint8_t rotation = 0;
-  //for(uint8_t rotation = 0; rotation<4; rotation ++){
-    // tft.setRotation(rotation);
-    // tft.setCursor(0, 0);
-    // tft.print("SmartChargeIC :D");
-    // testText();
+  tft.setCursor(195,90);
+  tft.fillRect(0, 240, 320, 10, ILI9341_BLACK);
+  tft.fillRect(0, 240, 320, 10, ILI9341_BLUE);
+  tft.fillRect(0, 240, 320, 10, ILI9341_WHITE);
+  // ;tft.drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
 
-    delay(50);
-  //}
-}
 
-unsigned long testText(){
-  tft.fillScreen(ILI9341_RED);
-  unsigned long start = micros();
-  tft.setCursor(0, 0);
-
-  tft.setTextColor(ILI9341_BLACK);
-  tft.setTextSize(2);
-  
-  tft.print("SmartChargeIC :D");
-  
-  return micros() - start;
 }
