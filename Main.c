@@ -25,6 +25,8 @@ int dutyCycleTempLoss;                                              //Stores dut
 bool fastCharge;
 uint8_t maxChargeLimit;
 bool alarmSet;
+bool limitButton;
+bool speedButton;
 
 RTC_DS1307 rtc;                                                     //Declares RTC object
 DateTime currentTime;
@@ -111,9 +113,9 @@ void loadScreen() {
     //call setAlarm function to draw circle position
 }
 
-// void showNumpad() {
+void showNumpad() {
 
-// }
+}
 
 void setAlarm() {
     if (alarmSet == 1) {
@@ -122,10 +124,8 @@ void setAlarm() {
         alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
     }
     //draw toggle button/circle (+ alarmSet * ~50pixelOffset)
-    //if (setAlarm.pressed)
         alarmSet ^= 1;
         EEPROM.update(2, alarmSet);
-        setAlarm();
 }
 
 void getBatteryTemp(void) {
@@ -138,13 +138,15 @@ void getBatteryTemp(void) {
 }
 
 void setChargeSpeed() {
-    //if (setChargeSpeed.pressed)
+        if (speedButton = true) {
         fastCharge ^= 1;
         EEPROM.update(0, fastCharge);
+        }
 }
 
 void setMaxChargeLimit() {
-    //if (setMaxChargeLimit.pressed)
-        //maxChargeLimit = userValueFromScreen
+        if (limitButton = true) {
+        maxChargeLimit = userValueFromScreen
         EEPROM.update(1, maxChargeLimit);
+        }
 }
