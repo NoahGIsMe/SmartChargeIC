@@ -1,7 +1,7 @@
-#include <Wire.h>
-#include <EEPROM.h>
-#include <RTClib.h>
-#include "LTC2941.h"
+#include <Wire.h>       //I2C library
+#include <EEPROM.h>     //EEPROM editor library
+#include <RTClib.h>     //RTC library
+#include "LTC2941.h"    //Coulomb counter library
 
 #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
     #define Serial SerialUSB
@@ -15,11 +15,11 @@
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
 int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
 
-//float coulomb = 0;
-float mAh;
-float percent;
-float prevBatteryTemp;
-//float currentBatteryTemp = 0;
+float coulomb = 0;
+float mAh = 0;
+float percent = 0;
+float prevBatteryTemp = 0;
+float currentBatteryTemp = 0;
 int dutyCycle;
 int dutyCycleTempLoss;                                              //Stores duty cycle decrease due to temperature limit
 bool fastCharge;
@@ -56,18 +56,26 @@ void setup(void) {
 
     Serial.begin(115200);
     while (!Serial.available());
-    //Serial.println("LTC2941 Raw Data");
     ltc2941.initialize();
     ltc2941.setBatteryFullMAh(1000);
 
-    loadScreen();
+    loadScreen();                                                   //Turns on screen
+}
+
+void loop(void) {
+    coulomb = ltc2941.getCoulombs();                                //reads charge in coulombs
+    mAh = ltc2941.getmAh();                                         //reads charge in mAh
+    percent = ltc2941.getPercent();                                 //reads battery percentage
+    setAlarm();                                                     //set the alarm
+    getBatteryTemp(void);                                           //get the battery temperature
+    setChargeSpeed();                                               //set the charge speed
+    setMaxChargeLimit();                                            //set the charge capacity
 }
 
 ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
-    percent = ltc2941.getPercent();
-    //call print/updateBatteryPercentage function - only update if it changes
+    percent = ltc2941.getPercent();                                 //call print/updateBatteryPercentage function - only update if it changes
 
-    //currentBatteryTemp = getBatteryTemp();                        //Reads current battery temperature
+    currentBatteryTemp = getBatteryTemp();                          //Reads current battery temperature
     int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
     float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
     float currentBatteryTemp = (tempVoltage - 0.5) * 100;           //Converts voltage to °C with 10mV/°C and 500mV offset
@@ -82,31 +90,6 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
         }
     }
     prevBatteryTemp = currentBatteryTemp;
-}
-
-void loop(void) {
-    //coulomb = ltc2941.getCoulombs();
-    //mAh = ltc2941.getmAh();
-    //percent = ltc2941.getPercent();
-    // Serial.print(coulomb);
-    // Serial.print("C,");
-    // Serial.print(mAh);
-    // Serial.print("mAh,");
-    // Serial.print(percent);
-    // Serial.print("%");
-    // Serial.println();
-    // delay(1000);
-
-    //if (setChargeSpeed.pressed)
-        fastCharge ^= 1;
-        EEPROM.update(0, fastCharge);
-    //if (setMaxChargeLimit.pressed)
-        //maxChargeLimit = userValueFromScreen
-        EEPROM.update(1, maxChargeLimit);
-    //if (setAlarmButton.pressed)
-        alarmSet ^= 1;
-        EEPROM.update(2, alarmSet);
-        setAlarm();
 }
 
 void loadScreen() {
@@ -139,6 +122,10 @@ void setAlarm() {
         alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
     }
     //draw toggle button/circle (+ alarmSet * ~50pixelOffset)
+    //if (setAlarm.pressed)
+        alarmSet ^= 1;
+        EEPROM.update(2, alarmSet);
+        setAlarm();
 }
 
 void getBatteryTemp(void) {
@@ -148,4 +135,16 @@ void getBatteryTemp(void) {
     Serial.print(tempC);
     return tempC;
     delay(1000);
+}
+
+void setChargeSpeed() {
+    //if (setChargeSpeed.pressed)
+        fastCharge ^= 1;
+        EEPROM.update(0, fastCharge);
+}
+
+void setMaxChargeLimit() {
+    //if (setMaxChargeLimit.pressed)
+        //maxChargeLimit = userValueFromScreen
+        EEPROM.update(1, maxChargeLimit);
 }
