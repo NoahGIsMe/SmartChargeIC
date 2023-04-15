@@ -40,8 +40,27 @@ void setup() {
   x = tft.readcommand8(ILI9341_RDSELFDIAG);
   Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
 
-  // Serial.print(F("Text                     "));
-  // Serial.println(testText());
+
+  Startup();
+
+}
+
+void loop() {
+  
+  //this code is only for testing whether i have to update the entire screen or i can only update a certain portion.
+  //probably gonna use a method to create a rectangle over the text so i can refresh the screen with a new value/image
+  tft.setCursor(195,90);
+  tft.fillRect(0, 240, 320, 10, ILI9341_BLACK);
+  tft.fillRect(0, 240, 320, 10, ILI9341_BLUE);
+  tft.fillRect(0, 240, 320, 10, ILI9341_WHITE);
+  // ;tft.drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
+
+
+}
+
+
+//Create the menu on inital startup, used in setup function
+void Startup(){
   tft.fillScreen(ILI9341_WHITE);
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(3);
@@ -64,7 +83,7 @@ void setup() {
   tft.print("Slow");
   tft.setCursor(195, 90);
   tft.print("Fast");
-  tft.drawRect(20, 100, 200, 30, ILI9341_BLACK); //draws a black rectangle to outline where the 
+  tft.drawRect(20, 100, 200, 30, ILI9341_BLACK); //draws a black rectangle to outline where the slider goes
   tft.fillRect(20,100,100,30,ILI9341_GREEN);
   tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
 
@@ -72,17 +91,4 @@ void setup() {
   tft.setCursor(0,175);
   
   tft.print("Maximum Charge");
-
-  // tft.fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  tft.setCursor(195,90);
-  tft.fillRect(0, 240, 320, 10, ILI9341_BLACK);
-  tft.fillRect(0, 240, 320, 10, ILI9341_BLUE);
-  tft.fillRect(0, 240, 320, 10, ILI9341_WHITE);
-  // ;tft.drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
-
-
 }
