@@ -138,14 +138,14 @@ void getBatteryTemp(void) {
 }
 
 void setChargeSpeed() {
-        if (speedButton = true) {
+        if (speedButton == true) {
         fastCharge ^= 1;
         EEPROM.update(0, fastCharge);
         }
 }
 
 void setMaxChargeLimit() {
-        if (limitButton = true) {
+        if (limitButton == true) {
         maxChargeLimit = userValueFromScreen
         EEPROM.update(1, maxChargeLimit);
         }
