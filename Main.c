@@ -9,7 +9,7 @@
     #define Serial Serial
 #endif
 
-#define aref_voltage 3.3    //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
+#define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
 #define sensorPin A0
 
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
@@ -144,8 +144,12 @@ void getBatteryTemp(void) {
 
 void setChargeSpeed() {
         if (speedButton == true) {
-        fastCharge ^= 1;
-        EEPROM.update(0, fastCharge);
+            fastCharge ^= 1;
+            digitalWrite(BLUE_LED, HIGH);
+            EEPROM.update(0, fastCharge);
+        }
+        else {
+            digitalWrite(BLUE_LED, LOW);
         }
 }
 
