@@ -22,6 +22,7 @@ float prevBatteryTemp = 0;
 float currentBatteryTemp = 0;
 int dutyCycle;
 int dutyCycleTempLoss;                                              //Stores duty cycle decrease due to temperature limit
+int interruptCounter;
 bool fastCharge;
 uint8_t maxChargeLimit;
 bool alarmSet;
@@ -46,9 +47,9 @@ void setup(void) {
     TCCR1A = 0;                                                     //Initializes 16-bit Timer1
     TCCR1B = 0;
     TCNT1  = 0;
-    OCR1A = 62500;                                                  //Sets Output Compare Register (16MHz clock/1024 prescaler/0.25Hz timer)
+    OCR1A = 62500;                                                  //Sets Output Compare Register (16MHz clock/256 prescaler/1Hz timer)
     TCCR1B |= (1 << WGM12);                                         //CTC mode clears timer when timer counter reaches OCR register value
-    TCCR1B |= (1 << CS12)|(1 << CS10);                              //Sets prescaler to 1024
+    TCCR1B |= (1 << CS12);                                          //Sets prescaler to 256
     TIMSK1 |= (1 << OCIE1A);                                        //Enables timer compare interrupt
     interrupts();                                                   //Enables all interrupts
 
@@ -61,6 +62,8 @@ void setup(void) {
     ltc2941.initialize();
     ltc2941.setBatteryFullMAh(1000);
 
+    analogReference(EXTERNAL);
+    
     loadScreen();                                                   //Turns on screen
 }
 
@@ -75,23 +78,25 @@ void loop(void) {
 }
 
 ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
-    percent = ltc2941.getPercent();                                 //call print/updateBatteryPercentage function - only update if it changes
+    if (++interruptCounter %= 10) {
+        percent = ltc2941.getPercent();                             //call print/updateBatteryPercentage function - only update if it changes
 
-    currentBatteryTemp = getBatteryTemp();                          //Reads current battery temperature
-    int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
-    float tempVoltage = tempReading * aref_voltage / 1023.0;        //Converts Vout from int to voltage between 0-3.3V
-    float currentBatteryTemp = (tempVoltage - 0.5) * 100;           //Converts voltage to °C with 10mV/°C and 500mV offset
-    if (currentBatteryTemp > 45) {
-        if (currentBatteryTemp >= prevBatteryTemp) {                //If battery temp exceeds 45°C limit and is not decreasing
-            //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
+        currentBatteryTemp = getBatteryTemp()                       //Reads current battery temperature
+        int tempReading = analogRead(tempPin)                       //Reads in and converts TMP36's Vout to int between 0-1023
+        float tempVoltage = tempReading * aref_voltage / 1023.0;    //Converts Vout from int to voltage between 0-3.3V
+        float currentBatteryTemp = (tempVoltage - 0.5) * 100;       //Converts voltage to °C with 10mV/°C and 500mV offset
+        if (currentBatteryTemp > 45) {
+            if (currentBatteryTemp >= prevBatteryTemp)              //If battery temp exceeds 45°C limit and is not decreasing
+                //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
+            }
         }
-    }
-    else {
-        if (dutyCycleTempLoss > 0) {                                //If battery temp is under 45°C limit and duty cycle has been temporarily decreased
-            //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - --dutyCycleTempLoss);   //Increase duty cycle until it is reaches normal values
+        else {
+            if (dutyCycleTempLoss > 0) {                            //If battery temp is under 45°C limit and duty cycle has been temporarily decreased
+                //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - --dutyCycleTempLoss);   //Increase duty cycle until it is reaches normal values
+            }
         }
+        prevBatteryTemp = currentBatteryTemp;
     }
-    prevBatteryTemp = currentBatteryTemp;
 }
 
 void loadScreen() {
