@@ -78,48 +78,55 @@ void Startup(){
 
   //prompts user for charge speed preferenc 
   tft.setTextSize(2);
-  tft.println("\n\nPlease select charge speed");
+  tft.println("\n\nSelect charge speed");
   
   //prints the charge slider
   tft.setTextSize(1);
-  tft.setCursor(20, 90);
+  tft.setCursor(20, 80);
   tft.print("Slow");
-  tft.setCursor(195, 90);
+  tft.setCursor(195, 80);
   tft.print("Fast");
-  tft.drawRect(20, 100, 200, 30, ILI9341_BLACK); //draws a black rectangle to outline where the slider goes
-  tft.fillRect(20,100,100,30,ILI9341_GREEN);
-  tft.fillRect(120,100,100,30,ILI9341_BLUE);
+  tft.drawRect(20, 90, 200, 30, ILI9341_BLACK); //draws a black rectangle to outline where the slider goes
+  tft.fillRect(20,90,100,30,ILI9341_GREEN);
+  tft.fillRect(120,90,100,30,ILI9341_BLUE);
 
   //Print Maximum charge setting
-  tft.setCursor(40,160);
+  tft.setCursor(40,145);
   tft.setTextSize(2);
   tft.print("Maximum Charge");
-  tft.drawRect(90, 195, 60, 50, ILI9341_BLACK);
+  tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
   tft.setTextSize(3);
-  tft.setCursor(95, 210);
+  tft.setCursor(95, 195);
   tft.print(ChargeCapacity);
-  tft.setCursor(30, 210);
+  tft.setCursor(30, 195);
   tft.print("-5");
-  tft.setCursor(175, 210);
+  tft.setCursor(175, 195);
   tft.print("+5");
 
   //Prints Alarm Stuffs
-  tft.setCursor()
+  tft.setCursor(15,245);
+  tft.setTextSize(2);
+  tft.println("Alarm Time");
+  tft.print("   ");
+  tft.setTextSize(3);
+  tft.print(AlarmHour);
+  tft.print(":");
+  tft.print(AlarmMinute);
 
 }
 
 void Choose_Charge_Speed(){
   TSPoint p = ts.getPoint();
-  if (p.z > ts.pressureThreshhold && p.y >315 && p.y<420) {
+  if (p.z > ts.pressureThreshhold && p.y >295 && p.y<400) {
     if(p.x>210 && p.x<430){
-        tft.fillRect(20,100,100,30,ILI9341_DARKGREEN);
-        tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
+        tft.fillRect(20,90,100,30,ILI9341_DARKGREEN);
+        tft.fillRect(20+100,90,100,30,ILI9341_BLUE);
         Serial.print("Slow Charging\n");
         delay(200);
     }
     if(p.x>550 && p.x<820){
-      tft.fillRect(20+100,100,100,30,ILI9341_NAVY);
-      tft.fillRect(20,100,100,30,ILI9341_GREEN);
+      tft.fillRect(20+100,90,100,30,ILI9341_NAVY);
+      tft.fillRect(20,90,100,30,ILI9341_GREEN);
       Serial.print("Fast Charging\n");
       delay(200);
     }
@@ -128,41 +135,42 @@ void Choose_Charge_Speed(){
 
 void Choose_Max_Capacity(){
   TSPoint p = ts.getPoint();
-  if(p.z>ts.pressureThreshhold && p.y >615 && p.y<715){
+  if(p.z>ts.pressureThreshhold && p.y >580 && p.y<680){
     if(p.x >230 && p.x < 280 && ChargeCapacity > 0 ){
-        tft.fillRect(30, 210, 35, 28, ILI9341_LIGHTGREY);
-        tft.setCursor(30, 210);
+        tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
+        tft.setCursor(30, 195);
         tft.setTextSize(3);
         tft.print("-5");
         delay(300);
-        tft.fillRect(30, 210, 35, 28, ILI9341_WHITE);
-        tft.setCursor(30, 210);
+        tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
+        tft.setCursor(30, 195);
         tft.setTextSize(3);
         tft.print("-5");
-        tft.fillRect(91, 196, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
-        tft.setCursor(105, 210);
+        tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+        tft.setCursor(105, 195);
         ChargeCapacity -= 5;
         tft.print(ChargeCapacity);
 
     }
     if(p.x>745 && p.x<805 && ChargeCapacity < 100){
-        tft.fillRect(175, 210, 35, 28, ILI9341_LIGHTGREY);
-        tft.setCursor(175, 210);
+        tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
+        tft.setCursor(175, 195);
         tft.setTextSize(3);
         tft.print("+5");
         delay(300);
-        tft.fillRect(175, 210, 35, 28, ILI9341_WHITE);
-        tft.setCursor(175, 210);
+        tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
+        tft.setCursor(175, 195);
         tft.setTextSize(3);
         tft.print("+5");
-        tft.fillRect(91, 196, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+        
+        tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
         ChargeCapacity += 5;
         if(ChargeCapacity == 100){
-        tft.setCursor(95, 210);
+        tft.setCursor(95, 195);
         tft.print(ChargeCapacity);
         }
         else{
-        tft.setCursor(105, 210);
+        tft.setCursor(105, 195);
         tft.print(ChargeCapacity);
         }
     }
