@@ -18,6 +18,7 @@
 #define YM 42  
 #define XP 40
 
+int ChargeCapacity = 100;
 
 
 void Startup();
@@ -36,18 +37,6 @@ void setup() {
  
   tft.begin();
 
-  // read diagnostics (optional but can help debug problems)
-  uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-  Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX);
-  x = tft.readcommand8(ILI9341_RDMADCTL);
-  Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX);
-  x = tft.readcommand8(ILI9341_RDPIXFMT);
-  Serial.print("Pixel Format: 0x"); Serial.println(x, HEX);
-  x = tft.readcommand8(ILI9341_RDIMGFMT);
-  Serial.print("Image Format: 0x"); Serial.println(x, HEX);
-  x = tft.readcommand8(ILI9341_RDSELFDIAG);
-  Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); 
-
 
   Startup();
 
@@ -62,10 +51,7 @@ Choose_Charge_Speed();
 
 Choose_Max_Capacity();
 
-// if(p.z>ts.pressureThreshhold() && p.y >630 && p.y<730)
-//   if(p.x >430 && p.x < 570){
 
-//   }
 
 }
 
@@ -99,32 +85,77 @@ void Startup(){
   tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
 
   //Print Maximum charge setting
-  tft.setCursor(40,175);
+  tft.setCursor(40,160);
   tft.setTextSize(2);
   tft.print("Maximum Charge");
-  tft.drawRect(90, 210, 60, 50, ILI9341_BLACK);
-  tft.setCursor(95, 213);
-  tft.print();
+  tft.drawRect(90, 195, 60, 50, ILI9341_BLACK);
+  tft.setTextSize(3);
+  tft.setCursor(95, 210);
+  tft.print(ChargeCapacity);
+  tft.setCursor(30, 210);
+  tft.print("-5");
+  tft.setCursor(175, 210);
+  tft.print("+5");
+
 }
 
 void Choose_Charge_Speed(){
   TSPoint p = ts.getPoint();
   if (p.z > ts.pressureThreshhold && p.y >315 && p.y<420) {
-  if(p.x>210 && p.x<430){
-      tft.fillRect(20,100,100,30,ILI9341_DARKGREEN);
-      tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
-      Serial.print("Slow Charging\n");
+    if(p.x>210 && p.x<430){
+        tft.fillRect(20,100,100,30,ILI9341_DARKGREEN);
+        tft.fillRect(20+100,100,100,30,ILI9341_BLUE);
+        Serial.print("Slow Charging\n");
+        delay(200);
+    }
+    if(p.x>550 && p.x<820){
+      tft.fillRect(20+100,100,100,30,ILI9341_NAVY);
+      tft.fillRect(20,100,100,30,ILI9341_GREEN);
+      Serial.print("Fast Charging\n");
       delay(200);
+    }
   }
-  if(p.x>550 && p.x<820){
-    tft.fillRect(20+100,100,100,30,ILI9341_NAVY);
-    tft.fillRect(20,100,100,30,ILI9341_GREEN);
-    Serial.print("Fast Charging\n");
-    delay(200);
-  }
-}
 }
 
 void Choose_Max_Capacity(){
+  TSPoint p = ts.getPoint();
+  if(p.z>ts.pressureThreshhold && p.y >615 && p.y<715){
+    if(p.x >230 && p.x < 280 && ChargeCapacity > 0 ){
+        tft.fillRect(30, 210, 35, 28, ILI9341_LIGHTGREY);
+        tft.setCursor(30, 210);
+        tft.setTextSize(3);
+        tft.print("-5");
+        delay(300);
+        tft.fillRect(30, 210, 35, 28, ILI9341_WHITE);
+        tft.setCursor(30, 210);
+        tft.setTextSize(3);
+        tft.print("-5");
+        tft.fillRect(91, 196, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+        tft.setCursor(105, 210);
+        ChargeCapacity -= 5;
+        tft.print(ChargeCapacity);
 
+    }
+    if(p.x>745 && p.x<805 && ChargeCapacity < 100){
+        tft.fillRect(175, 210, 35, 28, ILI9341_LIGHTGREY);
+        tft.setCursor(175, 210);
+        tft.setTextSize(3);
+        tft.print("+5");
+        delay(300);
+        tft.fillRect(175, 210, 35, 28, ILI9341_WHITE);
+        tft.setCursor(175, 210);
+        tft.setTextSize(3);
+        tft.print("+5");
+        tft.fillRect(91, 196, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+        ChargeCapacity += 5;
+        if(ChargeCapacity == 100){
+        tft.setCursor(95, 210);
+        tft.print(ChargeCapacity);
+        }
+        else{
+        tft.setCursor(105, 210);
+        tft.print(ChargeCapacity);
+        }
+    }
+  }
 }
