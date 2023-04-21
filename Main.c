@@ -124,8 +124,8 @@ void showNumpad() {
 
 void setAlarm() {
     if (alarmSet == 1) {
-        currentTime = rtc.now;
-        alarmHourDiff = (alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0);
+        currentTime = rtc.now();
+        alarmHourDiff = ((alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0) + 24) % 24;
         alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
     }
     //draw toggle button/circle (+ alarmSet * ~50pixelOffset)
