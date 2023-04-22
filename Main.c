@@ -62,7 +62,7 @@ void setup(void) {
     ltc2941.initialize();
     ltc2941.setBatteryFullMAh(1000);
 
-    analogReference(EXTERNAL);
+    analogReference(EXTERNAL);                                      //Enables AREF to 3.3V
     
     loadScreen();                                                   //Turns on screen
 }
@@ -133,13 +133,13 @@ void setAlarm() {
         EEPROM.update(2, alarmSet);
 }
 
-void getBatteryTemp(void) {
+float getBatteryTemp() {
     int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
-    float tempVoltage = (tempReading * aref_voltage) / 1024.0;      //Converts Vout from int to voltage between 0-3.3V
+    float tempVoltage = (tempReading * aref_voltage) / 1023.0;      //Converts Vout from int to voltage between 0-3.3V
     float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
     Serial.print(tempC);
+    Serial.println("°C");
     return tempC;
-    delay(1000);
 }
 
 void setChargeSpeed() {
