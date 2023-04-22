@@ -62,8 +62,6 @@ void setup(void) {
     while (!Serial.available());
     ltc2941.initialize();
     ltc2941.setBatteryFullMAh(1000);
-
-    analogReference(EXTERNAL);                                      //Enables AREF to 3.3V
     
     loadScreen();                                                   //Turns on screen
 }
