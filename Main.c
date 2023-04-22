@@ -14,6 +14,7 @@
 
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
 int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
+int blueLED = 5;
 
 float coulomb = 0;
 float mAh = 0;
@@ -143,19 +144,19 @@ float getBatteryTemp() {
 }
 
 void setChargeSpeed() {
-        if (speedButton == true) {
-            fastCharge ^= 1;
-            digitalWrite(BLUE_LED, HIGH);
-            EEPROM.update(0, fastCharge);
-        }
-        else {
-            digitalWrite(BLUE_LED, LOW);
-        }
+    if (speedButton == true) {
+        fastCharge ^= 1;
+        digitalWrite(blueLED, HIGH);
+        EEPROM.update(0, fastCharge);
+    }
+    else {
+        digitalWrite(blueLED, LOW);
+    }
 }
 
 void setMaxChargeLimit() {
-        if (limitButton == true) {
+    if (limitButton == true) {
         maxChargeLimit = userValueFromScreen
         EEPROM.update(1, maxChargeLimit);
-        }
+    }
 }
