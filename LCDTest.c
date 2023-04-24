@@ -18,7 +18,7 @@
 #define YM 42  
 #define XP 40
 
-#define Interrupt 2
+#define interruptPin 2
 
 int ChargeCapacity = 100;
 int AlarmHour = 5;
