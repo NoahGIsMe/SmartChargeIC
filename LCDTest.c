@@ -126,7 +126,7 @@ void Choose_Charge_Speed(){
         Serial.print("Slow Charging\n");
         delay(200);
     }
-    if(p.x>550 && p.x<820){
+    else if(p.x>550 && p.x<820){
       tft.fillRect(20+100,90,100,30,ILI9341_NAVY);
       tft.fillRect(20,90,100,30,ILI9341_GREEN);
       Serial.print("Fast Charging\n");
@@ -154,7 +154,7 @@ void Choose_Max_Capacity(){
         tft.print(ChargeCapacity);
 
     }
-    if(p.x>745 && p.x<805 && ChargeCapacity < 100){
+    else if(p.x>745 && p.x<805 && ChargeCapacity < 100){
         tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
         tft.setCursor(175, 195);
         tft.setTextSize(3);
