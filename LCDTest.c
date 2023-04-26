@@ -132,6 +132,7 @@ void Startup(){
   }
   else if(alarmToggle == true){
     tft.fillCircle(200, 255, 10, ILI9341_GREEN);
+    tft.drawCircle(200,255,10, ILI9341_BLACK);
   }
 
   //Prints Set Alarm Button
