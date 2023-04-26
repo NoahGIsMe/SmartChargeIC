@@ -22,7 +22,6 @@
 
 int ChargeCapacity = 100;
 int AlarmHour = 1;
-// int AlarmHour2 = 1;
 int AlarmMinute = 1;
 bool alarmToggle = false;
 
@@ -120,8 +119,13 @@ void Startup(){
   tft.setTextSize(3);
   tft.print(AlarmHour);
   tft.print(":");
-  tft.print(AlarmMinute);
-  
+  if(AlarmMinute < 9){
+    tft.print("0");
+    tft.print(AlarmMinute);
+  }
+  else{
+    tft.print(AlarmMinute);
+  }
   //Prints Alarm Toggle
   if(alarmToggle == false){
     tft.fillCircle(200, 255, 10, ILI9341_WHITE);
@@ -324,12 +328,100 @@ void Set_Alarm_Hour(){
 }
 
 
-// void Set_Alarm_Minute(){
+void Set_Alarm_Minute(){
+        tft.setTextSize(3);
+        tft.fillRect(0, 145, 240, 175, ILI9341_WHITE);
+        tft.setCursor(30,145);
+        tft.setTextSize(2);
+        tft.print("Set Alarm Minute");
+        tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
+        tft.setTextSize(3);
+        tft.setCursor(110, 195);
+        tft.print(AlarmHour);
+        tft.setCursor(30, 195);
+        tft.print("-5");
+        tft.setCursor(175, 195);
+        tft.print("+5");
+
+        //Prints SET button
+        tft.drawRect(70, 260, 100, 28, ILI9341_BLACK);
+        tft.setCursor(95, 262);
+        tft.setTextSize(3);
+        tft.print("SET");
+
+    bool alarmSet;
+
+  do{
+
+    alarmSet = false;
+    TSPoint p = ts.getPoint();
+      
+    if(p.z>ts.pressureThreshhold && p.y >580 && p.y<680){
+
+      if(p.x >230 && p.x < 280 && AlarmHour > 0 ){
+          tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
+          tft.setCursor(30, 195);
+          tft.setTextSize(3);
+          tft.print("-5");
+          delay(300);
+          tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
+          tft.setCursor(30, 195);
+          tft.setTextSize(3);
+          tft.print("-5");
+          tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+          AlarmMinute -= 5;
+          if(AlarmHour > 9){
+          tft.setCursor(105, 195);
+          tft.print(AlarmMinute);
+          }
+
+          else{
+          tft.setCursor(110, 195);
+          tft.print(AlarmMinute);
+          }
+      }
+
+      else if(p.x>745 && p.x<805 && AlarmHour < 24){
+          tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
+          tft.setCursor(175, 195);
+          tft.setTextSize(3);
+          tft.print("+5");
+          delay(300);
+          tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
+          tft.setCursor(175, 195);
+          tft.setTextSize(3);
+          tft.print("+5");
+          
+          tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+          AlarmMinute += 5;
+          if(AlarmMinute > 9){
+          tft.setCursor(105, 195);
+          tft.print(AlarmMinute);
+          }
+
+          else{
+          tft.setCursor(110, 195);
+          tft.print("0");
+          tft.print(AlarmMinute);
+          }
+
+      }
+
+  }
+
+      if(p.y>760 && p.y<830){
+        if(p.x>350 && p.x<620){
+        alarmSet = true;
+        }
+      }
 
 
+  }while(alarmSet == false);
+
+  Startup();
 
   
-// }
+ }
 
 // void Toggle_Alarm(){
 
