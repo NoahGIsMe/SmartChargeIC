@@ -14,7 +14,7 @@
 
 //Can be any pin as long as its digital
 #define TFT_DC 46
-#define TFT_CS 48
+#define TFT_CS 44
 #define YM 42  
 #define XP 40
 
@@ -23,9 +23,10 @@
 int ChargeCapacity = 100;
 int AlarmHour = 1;
 int AlarmMinute = 0;
+float percentage;
 bool alarmToggle = false;
-bool alarmSet = false;
-
+bool isPM = false;
+String AMPM = "AM";
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 TouchScreen ts = TouchScreen(XP,YP,XM,YM,300);
 
@@ -44,16 +45,12 @@ void setup() {
  
   tft.begin();
 
-
   Startup();
 
 }
 
 void loop() {
-  
-  //this code is only for testing whether i have to update the entire screen or i can only update a certain portion.
-  //probably gonna use a method to create a rectangle over the text so i can refresh the screen with a new value/image
-  // ;tft.drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
+
 Choose_Charge_Speed();
 
 Choose_Max_Capacity();
@@ -62,13 +59,9 @@ Set_Alarm();
 
 Toggle_Alarm();
 
-// delay(3000);
-
-
-
+batteryPercentage();
 
 }
-
 
 //Create the menu on inital startup, used in setup function
 void Startup(){
@@ -81,10 +74,9 @@ void Startup(){
 
   //prints the Title
   tft.setRotation(rotation);
-  tft.setCursor(0, 20);
-  tft.print("SmartChargeIC");
 
   //prompts user for charge speed preferenc 
+  tft.setCursor(0,20);
   tft.setTextSize(2);
   tft.println("\n\nSelect charge speed");
   
@@ -115,16 +107,20 @@ void Startup(){
   tft.setCursor(15,245);
   tft.setTextSize(2);
   tft.println("Alarm Time");
-  tft.print("   ");
+  tft.print(" ");
   tft.setTextSize(3);
   tft.print(AlarmHour);
   tft.print(":");
   if(AlarmMinute < 9){
     tft.print("0");
     tft.print(AlarmMinute);
+    tft.print(" ");
+    tft.print(AMPM);
   }
   else{
     tft.print(AlarmMinute);
+    tft.print(" ");
+    tft.print(AMPM);
   }
   //Prints Alarm Toggle
   if(alarmToggle == false){
@@ -211,7 +207,6 @@ void Choose_Max_Capacity(){
 
 }
 
-
 void Set_Alarm(){
   TSPoint p = ts.getPoint();
   if(p.z>ts.pressureThreshhold && p.y >835 && p.y<880){
@@ -241,15 +236,15 @@ void Set_Alarm(){
         tft.print("+1");
 
         //Prints SET button
-        tft.drawRect(70, 260, 100, 28, ILI9341_BLACK);
-        tft.setCursor(95, 262);
+        tft.drawRect(20, 260, 100, 28, ILI9341_BLACK);
+        tft.setCursor(45, 262);
         tft.setTextSize(3);
         tft.print("SET");
-
+        Toggle_AM_PM();
         Set_Alarm_Hour();
     }
   }
-  
+
 }
 
 void Set_Alarm_Hour(){
@@ -283,6 +278,7 @@ void Set_Alarm_Hour(){
           tft.setCursor(110, 195);
           tft.print(AlarmHour);
           }
+          
       }
 
       else if(p.x>745 && p.x<805 && AlarmHour < 23){
@@ -313,11 +309,12 @@ void Set_Alarm_Hour(){
   }
 
       if(p.y>760 && p.y<830){
-        if(p.x>350 && p.x<620){
+        if(p.x>160 && p.x<500){
         alarmSet = true;
         }
       }
 
+      Toggle_AM_PM();
 
   }while(alarmSet == false);
 
@@ -327,7 +324,6 @@ void Set_Alarm_Hour(){
 
 
 }
-
 
 void Set_Alarm_Minute(){
         tft.setTextSize(3);
@@ -356,7 +352,7 @@ void Set_Alarm_Minute(){
 
     alarmSet = false;
     TSPoint p = ts.getPoint();
-      
+    
     if(p.z>ts.pressureThreshhold && p.y >580 && p.y<680){
 
       if(p.x >230 && p.x < 280 && AlarmMinute > 0 ){
@@ -429,28 +425,64 @@ void Toggle_Alarm(){
   
   TSPoint p = ts.getPoint();
 
-  if(p.z> ts.pressureThreshhold && p.y > 735 && p.y < 750){
-    if(p.x > 773 && p.x < 787){
-      if(alarmSet == true){ //user can't toggle the alarm ON/OFF before setting it
-      alarmToggle != alarmToggle; // alarmToggle is default FALSE, so pressing it makes it TRUE. Lines 137 and 141 take this value and change the alarm color status)
-     }
+  if(p.z> ts.pressureThreshhold && p.y > 720 && p.y < 770){
+    if(p.x > 700 && p.x < 770){
+      if(alarmToggle == true){
+      alarmToggle = false;
+      tft.fillCircle(200, 255, 10, ILI9341_WHITE);
+      tft.drawCircle(200, 255, 10, ILI9341_BLACK);
+      delay(200);
+      }
+      else if(alarmToggle == false){
+      alarmToggle = true;
+      tft.fillCircle(200, 255, 10, ILI9341_GREEN);
+      tft.drawCircle(200, 255, 10, ILI9341_BLACK);
+      delay(200);
+      }
     }
-   }
-  while (alarmToggle == true){ //only decrement the timer if the alarm is toggled. toggling it again is the equivalent of a pause button
-    delay(60000); // 1 minute in milliseconds
-    AlarmMinute--;
-
-    if (AlarmMinute = 0) { //Lets say its 7:00 and the alarm needs to count down one minute. you subtract 1 from the hour to get 6:00, and change the minute to 59 to get 6:59. run program normally from here
-      AlarmHour --;
-      AlarmMinute = 59;
-    }
-    else if (AlarmHour == 0 && AlarmMinute == 0){
-      alarmToggle != alarmToggle; //resets toggle status when alarm goes off
-    }
-    
   }
 }
 
-// void Toggle_AM_PM(){
-//   fuck
-// }
+void Toggle_AM_PM(){
+  //Print isAM toggle button
+  tft.drawRect(130, 260, 100, 28, ILI9341_BLACK);
+  tft.setCursor(135, 262);
+  tft.setTextSize(3);
+  tft.print("AM/PM");
+  tft.setCursor(110,290);
+  tft.setTextSize(2);
+  tft.print("Set to:");
+  tft.print(AMPM);
+
+  TSPoint p = ts.getPoint();
+
+  if(p.z> ts.pressureThreshhold && p.y > 735 && p.y < 830){
+    if(p.x > 590 && p.x < 890){
+      if(isPM == true){
+      isPM = false;
+      AMPM = "AM";
+      tft.fillRect(0, 290, 240, 30, ILI9341_WHITE);
+      tft.setCursor(110,290);
+      tft.print("Set to:");
+      tft.print(AMPM);
+      delay(200);
+      }
+      else if(isPM == false){
+      isPM = true;
+      AMPM = "PM";
+      tft.fillRect(0, 290, 240, 30, ILI9341_WHITE);
+      tft.setCursor(110,290);
+      tft.print("Set to:");
+      tft.print(AMPM);
+      delay(200);
+      }
+    }
+  }
+}
+
+void batteryPercentage(){
+  tft.setTextSize(2);
+  tft.setCursor(165, 15);
+  tft.print(percentage);
+  tft.print("%");
+}
