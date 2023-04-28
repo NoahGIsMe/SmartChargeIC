@@ -410,8 +410,8 @@ void Toggle_Alarm(){
   
   TSPoint p = ts.getPoint();
 
-  if(p.z> ts.pressureThreshhold && p.y > 720 && p.y < 770){
-    if(p.x > 700 && p.x < 770){
+  if(p.z> ts.pressureThreshhold && p.y > 700 && p.y < 770){
+    if(p.x > 750 && p.x < 830){
       if(alarmToggle == true){
       alarmToggle = false;
       tft.fillCircle(200, 255, 10, ILI9341_WHITE);
