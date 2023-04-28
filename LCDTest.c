@@ -13,7 +13,7 @@
 #define XM A3 //Has to be an analog pin
 
 //Can be any pin as long as its digital
-#define TFT_DC 48
+#define TFT_DC 48 //jesus test board pin 46
 #define TFT_CS 44
 #define YM 42  
 #define XP 40
