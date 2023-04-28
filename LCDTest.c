@@ -24,6 +24,7 @@ int ChargeCapacity = 100;
 int AlarmHour = 1;
 int AlarmMinute = 0;
 bool alarmToggle = false;
+bool alarmSet = false;
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 TouchScreen ts = TouchScreen(XP,YP,XM,YM,300);
@@ -59,7 +60,7 @@ Choose_Max_Capacity();
 
 Set_Alarm();
 
-// Toggle_Alarm();
+Toggle_Alarm();
 
 // delay(3000);
 
@@ -248,7 +249,7 @@ void Set_Alarm(){
         Set_Alarm_Hour();
     }
   }
-
+  
 }
 
 void Set_Alarm_Hour(){
@@ -424,11 +425,31 @@ void Set_Alarm_Minute(){
   
  }
 
-// void Toggle_Alarm(){
-//     TSPoint p = ts.getPoint();
+void Toggle_Alarm(){
+  
+  TSPoint p = ts.getPoint();
 
-//     if(p.z>ts.pressureThreshhold && p.y>)
-// }
+  if(p.z> ts.pressureThreshhold && p.y > 735 && p.y < 750){
+    if(p.x > 773 && p.x < 787){
+      if(alarmSet == true){ //user can't toggle the alarm ON/OFF before setting it
+      alarmToggle != alarmToggle; // alarmToggle is default FALSE, so pressing it makes it TRUE. Lines 137 and 141 take this value and change the alarm color status)
+     }
+    }
+   }
+  while (alarmToggle == true){ //only decrement the timer if the alarm is toggled. toggling it again is the equivalent of a pause button
+    delay(60000); // 1 minute in milliseconds
+    AlarmMinute--;
+
+    if (AlarmMinute = 0) { //Lets say its 7:00 and the alarm needs to count down one minute. you subtract 1 from the hour to get 6:00, and change the minute to 59 to get 6:59. run program normally from here
+      AlarmHour --;
+      AlarmMinute = 59;
+    }
+    else if (AlarmHour == 0 && AlarmMinute == 0){
+      alarmToggle != alarmToggle; //resets toggle status when alarm goes off
+    }
+    
+  }
+}
 
 // void Toggle_AM_PM(){
 //   fuck
