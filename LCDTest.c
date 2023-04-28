@@ -350,7 +350,7 @@ void Set_Alarm_Minute(){
           tft.setCursor(30, 195);
           tft.setTextSize(3);
           tft.print("-1");
-          delay(300);
+          delay(100);
           tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
           tft.setCursor(30, 195);
           tft.setTextSize(3);
@@ -373,7 +373,7 @@ void Set_Alarm_Minute(){
           tft.setCursor(175, 195);
           tft.setTextSize(3);
           tft.print("+1");
-          delay(300);
+          delay(100);
           tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
           tft.setCursor(175, 195);
           tft.setTextSize(3);
