@@ -466,6 +466,7 @@ void Toggle_AM_PM(){
 }
 
 void batteryPercentage(){
+  tft.fillRect(0, 0, 240, 30, ILI9341_WHITE);
   tft.setTextSize(2);
   tft.setCursor(165, 15);
   tft.print(percentage);
