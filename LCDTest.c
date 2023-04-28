@@ -13,12 +13,10 @@
 #define XM A3 //Has to be an analog pin
 
 //Can be any pin as long as its digital
-#define TFT_DC 46
+#define TFT_DC 48
 #define TFT_CS 44
 #define YM 42  
 #define XP 40
-
-// #define interruptPin 2
 
 int ChargeCapacity = 100;
 int AlarmHour = 1;
@@ -31,8 +29,14 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 TouchScreen ts = TouchScreen(XP,YP,XM,YM,300);
 
 void Startup();
-// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-
+void Choose_Charge_Speed();
+void Choose_Max_Capacity();
+void Set_Alarm();
+void Set_Alarm_Hour();
+void Set_Alarm_Minute();
+void Toggle_Alarm();
+void Toggle_AM_PM();
+void batteryPercentage();
 
 //text size 1 = 7 pixels max
 //text size 2 = 14
@@ -46,11 +50,9 @@ void setup() {
   tft.begin();
 
   Startup();
-
 }
 
 void loop() {
-
 Choose_Charge_Speed();
 
 Choose_Max_Capacity();
@@ -60,7 +62,6 @@ Set_Alarm();
 Toggle_Alarm();
 
 batteryPercentage();
-
 }
 
 //Create the menu on inital startup, used in setup function
@@ -137,7 +138,6 @@ void Startup(){
   tft.setTextSize(2);
   tft.print("Set Alarm");
   tft.drawRect(115, 290, 120 , 23, ILI9341_BLACK);
-
 }
 
 void Choose_Charge_Speed(){
@@ -200,11 +200,8 @@ void Choose_Max_Capacity(){
         tft.setCursor(105, 195);
         tft.print(ChargeCapacity);
         }
-
     }
-
   }
-
 }
 
 void Set_Alarm(){
@@ -244,7 +241,6 @@ void Set_Alarm(){
         Set_Alarm_Hour();
     }
   }
-
 }
 
 void Set_Alarm_Hour(){
@@ -277,8 +273,7 @@ void Set_Alarm_Hour(){
           else{
           tft.setCursor(110, 195);
           tft.print(AlarmHour);
-          }
-          
+          }  
       }
 
       else if(p.x>745 && p.x<805 && AlarmHour < 23){
@@ -303,9 +298,7 @@ void Set_Alarm_Hour(){
           tft.setCursor(110, 195);
           tft.print(AlarmHour);
           }
-
       }
-
   }
 
       if(p.y>760 && p.y<830){
@@ -320,9 +313,6 @@ void Set_Alarm_Hour(){
 
   // Startup();
   Set_Alarm_Minute();
-
-
-
 }
 
 void Set_Alarm_Minute(){
@@ -401,10 +391,7 @@ void Set_Alarm_Minute(){
           tft.print("0");
           tft.print(AlarmMinute);
           }
-
-
       }
-
   }
 
       if(p.y>760 && p.y<830){
@@ -413,13 +400,11 @@ void Set_Alarm_Minute(){
         }
       }
 
-
   }while(alarmSet == false);
 
   Startup();
-
-  
- }
+ 
+}
 
 void Toggle_Alarm(){
   
