@@ -1,7 +1,7 @@
-#include <Wire.h>       //I2C library
-#include <EEPROM.h>     //EEPROM editor library
-#include <RTClib.h>     //RTC library
-#include "LTC2941.h"    //Coulomb counter library
+#include <Wire.h>                       //I2C library
+#include <EEPROM.h>                     //EEPROM editor library
+#include <RTClib.h>                     //RTC library
+#include "LTC2941.h"                    //Coulomb counter library
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
@@ -19,8 +19,8 @@
 
 #define YP A2                                                       //Have to be analog pins
 #define XM A3
-#define TFT_DC 46                                                   //Can be any pin as long as its digital
-#define TFT_CS 48
+#define TFT_DC 48                                                   //Can be any pin as long as its digital
+#define TFT_CS 44
 #define YM 42  
 #define XP 40
 
@@ -37,8 +37,8 @@ int dutyCycle;
 int dutyCycleTempLoss;                                              //Stores duty cycle decrease due to temperature limit
 int interruptCounter;
 bool fastCharge;
-int8_t chargeLimit = 80;                                            //Sets default maximum battery percentage to 80%
-bool alarmSet;
+int8_t chargeLimit = 100;                                           //Sets default maximum battery percentage to 80%
+bool alarmEnabled;
 bool limitButton;
 bool speedButton;
 
@@ -47,6 +47,7 @@ DateTime currentTime;
 uint8_t alarmHour;
 uint8_t alarmMinute;
 bool isPM;
+String AMPM = "AM";
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
 
@@ -75,6 +76,7 @@ void setup(void) {
     ltc2941.initialize();
     ltc2941.setBatteryFullMAh(1000);
     
+    tft.begin();
     loadScreen();                                                   //Turns on screen
 }
 
@@ -101,11 +103,11 @@ void loop(void) {
                 setChargeLimit(5);
             }
         }
-        else if () {
-            //alarmSet
+        else if (p.y > 700 && p.y < 770 && p.x > 750 && p.x < 830){
+            toggleAlarm();
         }
-        else if () {
-            //alarmToggle
+        else if (p.y > 835 && p.y < 880 && p.x > 535 && p.x < 830) {
+            setAlarm();
         }
     }
     
@@ -124,7 +126,7 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
 
         currentBatteryTemp = getBatteryTemp()                       //Reads current battery temperature
         if (currentBatteryTemp > 45) {
-            if (currentBatteryTemp >= prevBatteryTemp)              //If battery temp exceeds 45°C limit and is not decreasing
+            if (currentBatteryTemp >= prevBatteryTemp) {            //If battery temp exceeds 45°C limit and is not decreasing
                 //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
             }
         }
@@ -137,42 +139,258 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
     }
 }
 
-void loadScreen() {
-    tft.begin();
-    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
-    TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
-    
-    //fastCharge = EEPROM.read(0);                                    //Loads charging speed setting from EEPROM
-    //maxChargeLimit = EEPROM.read(1);                                //Loads maximum charge limit setting from EEPROM
-    //alarmSet = EEPROM.read(2);
+void loadScreen() {                                                 //Initializes screen upon Arduino startup
+    tft.fillScreen(ILI9341_WHITE);
+    tft.setTextColor(ILI9341_BLACK);
+    tft.setTextSize(3);
 
-    //call print/updateBatteryPercentage function
-    //call print/updateColorOfLightningBolt function if charging
-    //print "Charging Mode", "Slow", and "Fast" in fixed positions
-    //draw rounded rectangle in fixed position (https://learn.adafruit.com/adafruit-gfx-graphics-library/graphics-primitives#rounded-rectangles-2002792)
-    //call drawChargeSpeedCircle (fixed slow/fast positions)
-    //print "Maximum Charge Limit" in fixed position
-    //call print/updateChargeLimit function to print text
-    //draw button that brings up numpad to enter charge limit
-    //print "Alarm" in fixed position
-    //call print/updateAlarmTime function
-    //draw rounded rectangle in fixed position
-    //call setAlarm function to draw circle position
+    showBatteryPercentage();
+
+    uint8_t rotation = 0;                                           //Sets screen orientation to portrait and prints screen
+    tft.setRotation(rotation);
+    tft.setCursor(0,20);                                            //Prompts user for charge speed preference
+    tft.setTextSize(2);
+    tft.println("\n\nSelect charge speed");
+  
+    tft.setTextSize(1);                                             //Prints the charge slider
+    tft.setCursor(20, 80);
+    tft.print("Slow");
+    tft.setCursor(195, 80);
+    tft.print("Fast");
+    tft.drawRect(20, 90, 200, 30, ILI9341_BLACK);                   //Draws a black rectangle to outline where the slider goes
+    tft.fillRect(20,90,100,30,ILI9341_GREEN);
+    tft.fillRect(120,90,100,30,ILI9341_BLUE);
+
+    tft.setCursor(40,145);                                          //Prints maximum charge setting
+    tft.setTextSize(2);
+    tft.print("Maximum Charge");
+    tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
+    tft.setTextSize(3);
+    tft.setCursor(95, 195);
+    tft.print(ChargeCapacity);
+    tft.setCursor(30, 195);
+    tft.print("-5");
+    tft.setCursor(175, 195);
+    tft.print("+5");
+
+    tft.setCursor(15,245);                                          //Prints alarm content
+    tft.setTextSize(2);
+    tft.println("Alarm Time");
+    tft.print(" ");
+    tft.setTextSize(3);
+    tft.print(alarmHour);
+    tft.print(":");
+    if (alarmMinute < 9) {
+        tft.print("0");
+        tft.print(alarmMinute);
+        tft.print(" ");
+        tft.print(AMPM);
+    }
+    else {
+        tft.print(alarmMinute);
+        tft.print(" ");
+        tft.print(AMPM);
+    }
+
+    tft.fillCircle(200, 255, 10, (alarmEnabled ? ILI9341_GREEN : ILI9341_WHITE));   //Prints alarm toggle
+    tft.drawCircle(200, 255, 10, ILI9341_BLACK);
+    if (alarmEnabled) {
+        calculateTimeDiff();
+    }
+
+    tft.setCursor(120, 295);                                        //Prints Set Alarm button
+    tft.setTextSize(2);
+    tft.print("Set Alarm");
+    tft.drawRect(115, 290, 120 , 23, ILI9341_BLACK);
 }
 
-void showNumpad() {
+void calculateTimeDiff() {
+    currentTime = rtc.now();
+    alarmHourDiff = ((alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0) + 24) % 24;
+    alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
+}
 
+void toggleAlarm(){
+    alarmEnabled ^= 1;
+    EEPROM.update(2, alarmEnabled);
+    tft.fillCircle(200, 255, 10, (alarmEnable ? ILI9341_GREEN : ILI9341_WHITE));
+    tft.drawCircle(200, 255, 10, ILI9341_BLACK);
+    delay(200);
 }
 
 void setAlarm() {
-    if (alarmSet == 1) {
-        currentTime = rtc.now();
-        alarmHourDiff = ((alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0) + 24) % 24;
-        alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
+    tft.fillRect(115, 290, 120 , 23, ILI9341_LIGHTGREY);
+    tft.setCursor(120, 295);
+    tft.setTextSize(2);
+    tft.print("Set Alarm");
+    delay(300);
+    tft.fillRect(115, 290, 120 , 23, ILI9341_WHITE);
+    tft.setCursor(120, 295);
+    tft.setTextSize(2);
+    tft.print("Set Alarm");
+
+    tft.setTextSize(3);                                             //Creates area to set Alarm Hour
+    tft.fillRect(0, 145, 240, 175, ILI9341_WHITE);
+    tft.setCursor(30,145);
+    tft.setTextSize(2);
+    tft.print("Set Alarm Hour");
+    tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
+    tft.setTextSize(3);
+    tft.setCursor(110, 195);
+    tft.print(alarmHour);
+    tft.setCursor(30, 195);
+    tft.print("-1");
+    tft.setCursor(175, 195);
+    tft.print("+1");
+
+    tft.drawRect(20, 260, 100, 28, ILI9341_BLACK);                  //Prints SET button
+    tft.setCursor(45, 262);
+    tft.setTextSize(3);
+    tft.print("SET");
+    
+    tft.drawRect(130, 260, 100, 28, ILI9341_BLACK);                 //Prints AM/PM toggle button
+    tft.setCursor(135, 262);
+    tft.setTextSize(3);
+    tft.print("AM/PM");
+    tft.setCursor(110,290);
+    tft.setTextSize(2);
+    tft.print("Set to:");
+    tft.print(AMPM);
+
+    setAlarmHour();
+}
+
+void setAlarmHour() {
+    bool alarmSet = false;
+    while (alarmSet == false) {
+        TSPoint p = ts.getPoint();
+        if (p.z > ts.pressureThreshhold) {
+            if (p.y > 580 && p.y < 680) {
+                if (p.x > 230 && p.x < 280) {
+                    tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
+                    tft.setCursor(30, 195);
+                    tft.setTextSize(3);
+                    tft.print("-1");
+                    delay(300);
+                    tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
+                    tft.setCursor(30, 195);
+                    tft.setTextSize(3);
+                    tft.print("-1");
+                    tft.fillRect(91, 181, 58, 48, ILI9341_WHITE);   //Don't change this (note to self)
+                    alarmHour = (alarmHour + 11) % 12;
+                }
+                else if (p.x > 745 && p.x < 805) {
+                    tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
+                    tft.setCursor(175, 195);
+                    tft.setTextSize(3);
+                    tft.print("+1");
+                    delay(300);
+                    tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
+                    tft.setCursor(175, 195);
+                    tft.setTextSize(3);
+                    tft.print("+1");
+                    tft.fillRect(91, 181, 58, 48, ILI9341_WHITE);   //Don't change this (note to self)
+                    alarmHour = (alarmHour + 13) % 12;
+                }
+                if (alarmHour > 9) {
+                    tft.setCursor(105, 195);
+                }
+                else {
+                    tft.setCursor(110, 195);
+                }
+                tft.print(alarmHour);
+            }
+            else if (p.y > 735 && p.y < 830) {
+                if (p.x > 160 && p.x < 500) {
+                    alarmSet = true;
+                }
+                else if (p.x > 590 && p.x < 890) {
+                    toggleAMPM();
+                }
+            }
+        }
     }
-    //draw toggle button/circle (+ alarmSet * ~50pixelOffset)
-        alarmSet ^= 1;
-        EEPROM.update(2, alarmSet);
+    //Startup();
+    EEPROM.update(3, alarmHour + isPM * 12);
+    setAlarmMinute();
+}
+
+void setAlarmMinute() {
+    tft.setTextSize(3);
+    tft.fillRect(0, 145, 240, 175, ILI9341_WHITE);
+    tft.setCursor(30, 145);
+    tft.setTextSize(2);
+    tft.print("Set Alarm Minute");
+    // tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
+    tft.setTextSize(3);
+    tft.setCursor(110, 195);
+    tft.print(alarmMinute);
+    // tft.setCursor(30, 195);
+    // tft.print("-1");
+    // tft.setCursor(175, 195);
+    // tft.print("+1");
+    tft.drawRect(70, 260, 100, 28, ILI9341_BLACK);                  //Prints SET button
+    tft.setCursor(95, 262);
+    tft.setTextSize(3);
+    tft.print("SET");
+
+    bool alarmSet = false;
+    while (alarmSet = false) {
+        TSPoint p = ts.getPoint();
+        if (p.z > ts.pressureThreshhold) {
+            if (p.y > 580 && p.y < 680) {
+                if (p.x > 230 && p.x < 280) {
+                    tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
+                    tft.setCursor(30, 195);
+                    tft.setTextSize(3);
+                    tft.print("-1");
+                    delay(100);
+                    tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
+                    tft.setCursor(30, 195);
+                    tft.setTextSize(3);
+                    tft.print("-1");
+                    tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+                    alarmMinute = (alarmMinute + 59) % 60;                    
+                }
+                else if (p.x > 745 && p.x < 805) {
+                    tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
+                    tft.setCursor(175, 195);
+                    tft.setTextSize(3);
+                    tft.print("+1");
+                    delay(100);
+                    tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
+                    tft.setCursor(175, 195);
+                    tft.setTextSize(3);
+                    tft.print("+1");
+                    tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
+                    alarmMinute = (alarmMinute + 61) % 60; 
+                }
+                if (alarmMinute > 9) {
+                    tft.setCursor(105, 195);
+                }
+                else {
+                    tft.setCursor(110, 195);
+                    tft.print("0");
+                }
+                tft.print(alarmMinute);
+            }
+            else if (p.y > 735 && p.y < 830 && p.x > 350 && p.x < 620) {
+                alarmSet = true;
+            }
+        }
+    }
+
+    EEPROM.update(4, alarmMinute);
+    loadScreen();
+}
+
+void toggleAMPM() {
+    AMPM = isPM ? "PM" : "AM";
+    tft.fillRect(0, 290, 240, 30, ILI9341_WHITE);
+    tft.setCursor(110,290);
+    tft.print("Set to:");
+    tft.print(AMPM);
+    delay(200);
 }
 
 float getBatteryTemp() {
@@ -187,16 +405,16 @@ float getBatteryTemp() {
 void showChargeSpeed() {
     if(fastCharge){
         tft.fillRect(20,90,100,30,ILI9341_DARKGREEN);
-        tft.fillRect(20+100,90,100,30,ILI9341_BLUE);
+        tft.fillRect(120,90,100,30,ILI9341_BLUE);
         Serial.println("Fast Charging");
     }
     else {
-        tft.fillRect(20+100,90,100,30,ILI9341_NAVY);                //20+100?
+        tft.fillRect(120,90,100,30,ILI9341_NAVY);
         tft.fillRect(20,90,100,30,ILI9341_GREEN);
         Serial.println("Slow Charging");
     }
     digitalWrite(blueLED, fastCharge);
-    delay(200);                                                     //is this delay necessary? no delay in setchargeLimit
+    delay(200);
 }
 
 void setChargeLimit(int8_t percentChange) {
@@ -233,4 +451,12 @@ void setChargeLimit(int8_t percentChange) {
         tft.setCursor(105, 195);
     }
     tft.print(chargeLimit);
+}
+
+void showBatteryPercentage(){
+  tft.fillRect(0, 0, 240, 30, ILI9341_WHITE);
+  tft.setTextSize(2);
+  tft.setCursor(165, 15);
+  tft.print(percent);
+  tft.print("%");
 }
