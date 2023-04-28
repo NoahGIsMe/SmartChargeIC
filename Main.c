@@ -47,7 +47,7 @@ DateTime currentTime;
 uint8_t alarmHour;
 uint8_t alarmMinute;
 bool isPM;
-String AMPM = "AM";
+String AMPM;
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
 
@@ -143,6 +143,12 @@ void loadScreen() {                                                 //Initialize
     tft.fillScreen(ILI9341_WHITE);
     tft.setTextColor(ILI9341_BLACK);
     tft.setTextSize(3);
+
+    fastCharge = EEPROM.read(0);
+    chargeLimit = EEPROM.read(1);
+    alarmEnabled = EEPROM.read(2);
+    alarm = EEPROM.read(3) % 12;
+    = EEPROM.read(4);
 
     showBatteryPercentage();
 
