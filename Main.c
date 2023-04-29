@@ -24,11 +24,13 @@
 #define YM 42  
 #define XP 40
 
+int chargerInput = 3;
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
-int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
 int blueLED = 5;
+int greenLED = 6;
+int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
-TouchScreen ts = TouchScreen(XP,YP,XM,YM,300);
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 float coulomb = 0;
 float mAh = 0;
@@ -69,6 +71,10 @@ void setup(void) {
     TIMSK1 |= (1 << OCIE1A);                                        //Enables timer compare interrupt
     interrupts();                                                   //Enables all interrupts
 
+    pinMode(blueLED, OUTPUT);
+    pinMode(greenLED, OUTPUT);
+    pinMode(chargerInput, INPUT);
+
     Wire.begin();
     while (!rtc.begin());                                           //Test for successful connection to DS1307
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));                 //Sets RTC to the date & time on the computer when sketch was compiled
@@ -89,11 +95,15 @@ void loop(void) {
             if (p.x > 210 && p.x < 430 && fastCharge != 0) {
                 fastCharge = 0;
                 EEPROM.update(0, fastCharge);
+                dutyCycle = 149;
+                analogWrite(PWMpin, dutyCycle);
                 showChargeSpeed();
             }
             else if (p.x > 550 && p.x < 820 && fastCharge != 1) {
                 fastCharge = 1;
                 EEPROM.update(0, fastCharge);
+                dutyCycle = 252;
+                analogWrite(PWMpin, dutyCycle);
                 showChargeSpeed();
             }
         }
@@ -112,6 +122,11 @@ void loop(void) {
             setAlarm();
         }
     }
+
+    if (digitalRead(chargerInput)) {
+        digitalWrite(greenLED, dutyCycle > 125);
+        digitalWrite(blueLED, dutyCycle > 230);
+    }
     
     //coulomb = ltc2941.getCoulombs();                                //reads charge in coulombs
     //mAh = ltc2941.getmAh();                                         //reads charge in mAh
@@ -125,10 +140,11 @@ void loop(void) {
 ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
     if (++interruptCounter %= 5) {
         percent = ltc2941.getPercent();                             //call print/updateBatteryPercentage function - only update if it changes
-        currentBatteryTemp = getBatteryTemp();
-        if (percent >= chargeLimit){
-          analogWrite(4, 0);
-        }                      //Reads current battery temperature
+        if (percent >= chargeLimit) {
+            analogWrite(PWMpin, 0);
+        }
+
+        currentBatteryTemp = getBatteryTemp();                      //Reads current battery temperature
         if (currentBatteryTemp > 45) {
             if (currentBatteryTemp >= prevBatteryTemp) {            //If battery temp exceeds 45°C limit and is not decreasing
                 //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
@@ -151,7 +167,7 @@ void loadScreen() {                                                 //Initialize
     fastCharge = EEPROM.read(0);
     chargeLimit = EEPROM.read(1);
     alarmEnabled = EEPROM.read(2);
-    alarmHour = EEPROM.read(3) % 12;
+    alarmHour = (EEPROM.read(3) + 11) % 12 + 1;
     alarmMinute = EEPROM.read(4);
 
     showBatteryPercentage();
@@ -321,16 +337,8 @@ void setAlarmHour() {
         }
     }
     //Startup();
-    if (isPM = true){
-      EEPROM.update(3, alarmHour + 12);
-      setAlarmMinute();
-      EEPROM.update(4, alarmMinute);
-    }
-    else {
-      EEPROM.update(3, alarmHour);
-      setAlarmMinute();
-      EEPROM.update(4, alarmMinute);
-    }
+    EEPROM.update(3, (alarmHour % 12) + isPM * 12);
+    setAlarmMinute();
 }
 
 void setAlarmMinute() {
@@ -405,7 +413,7 @@ void setAlarmMinute() {
 void toggleAMPM() {
     AMPM = isPM ? "PM" : "AM";
     tft.fillRect(0, 290, 240, 30, ILI9341_WHITE);
-    tft.setCursor(110,290);
+    tft.setCursor(110, 290);
     tft.print("Set to:");
     tft.print(AMPM);
     delay(200);
@@ -422,16 +430,15 @@ float getBatteryTemp() {
 
 void showChargeSpeed() {
     if(fastCharge){
-        tft.fillRect(20,90,100,30,ILI9341_DARKGREEN);
-        tft.fillRect(120,90,100,30,ILI9341_BLUE);
+        tft.fillRect(20, 90, 100, 30, ILI9341_DARKGREEN);
+        tft.fillRect(120, 90, 100, 30, ILI9341_BLUE);
         Serial.println("Fast Charging");
     }
     else {
-        tft.fillRect(120,90,100,30,ILI9341_NAVY);
-        tft.fillRect(20,90,100,30,ILI9341_GREEN);
+        tft.fillRect(120, 90, 100, 30, ILI9341_NAVY);
+        tft.fillRect(20, 90, 100, 30, ILI9341_GREEN);
         Serial.println("Slow Charging");
     }
-    digitalWrite(blueLED, fastCharge);
     delay(200);
 }
 
@@ -471,7 +478,7 @@ void setChargeLimit(int8_t percentChange) {
     tft.print(chargeLimit);
 }
 
-void showBatteryPercentage(){
+void showBatteryPercentage() {
   tft.fillRect(0, 0, 240, 30, ILI9341_WHITE);
   tft.setTextSize(2);
   tft.setCursor(165, 15);
