@@ -55,7 +55,16 @@ String AMPM;
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
 
-//post-testing table of duty cycle values vs. battery percentage/voltage (3-7-4.2V)
+uint16_t fastChargeLUT[101] = {    1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
+                                  10, , , , , , , , , ,
+                                  20, , , , , , , , , ,
+                                  30, , , , , , , , , ,
+                                  40, , , , , , , , , ,
+                                  50, , , , , , , , , ,
+                                  60, , , , , , , , , ,
+                                  70, , , , , , , , , ,
+                                  80, , , , , , , , , ,
+                                  90, , , , , , , , , ,}
 
 void setup(void) {
     TCCR0B = TCCR0B & B11111000 | B00000010;                        //Sets PWM switching frequency to 7812.5Hz for pins 4/13
@@ -143,6 +152,7 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
         if (percent >= chargeLimit) {
             analogWrite(PWMpin, 0);
         }
+        showBatteryPercentage();
 
         currentBatteryTemp = getBatteryTemp();                      //Reads current battery temperature
         if (currentBatteryTemp > 45) {
