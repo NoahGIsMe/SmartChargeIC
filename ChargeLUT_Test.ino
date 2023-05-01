@@ -18,7 +18,7 @@ uint16_t fastChargeLUT[101] = {    0,     0,     0,     0,     0,     0,     0, 
                                    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
                                    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
                                    0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-                                   0,     0,     0,     0,     0,     0,     0,     0,     0,     0};
+                                   0,     0,     0,     0,     0,     0,     0,     0,     0,     0,     0};
 
 void setup(void)
 {
@@ -36,9 +36,16 @@ void setup(void)
 void loop(void)
 {
     percent = ltc2941.getPercent();
-    if (percent >= fastChargeLUT[indexCount]) {
+    if (percent >= indexCount) {
       fastChargeLUT[indexCount] = timeCount;
+      Serial.println(timeCount);
       indexCount++;
+    }
+    if (percent >= 100) {
+      for(int i = 0; i < 101; i++)
+        {
+          Serial.print(fastChargeLUT[i]);
+        }
     }
     
     SERIAL.print(percent);
