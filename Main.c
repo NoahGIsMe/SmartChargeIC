@@ -24,11 +24,11 @@
 #define YM 42  
 #define XP 40
 
-int chargerInput = 3;
 int PWMpin = 4;                                                     //Pin 4 used due to higher base PWM frequency of 980Hz
 int blueLED = 5;
 int greenLED = 6;
 int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
+int chargerInput = A3;
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
@@ -82,7 +82,6 @@ void setup(void) {
 
     pinMode(blueLED, OUTPUT);
     pinMode(greenLED, OUTPUT);
-    pinMode(chargerInput, INPUT);
 
     Wire.begin();
     while (!rtc.begin());                                           //Test for successful connection to DS1307
@@ -132,10 +131,8 @@ void loop(void) {
         }
     }
 
-    if (digitalRead(chargerInput)) {
-        digitalWrite(greenLED, dutyCycle > 125);
-        digitalWrite(blueLED, dutyCycle > 230);
-    }
+    digitalWrite(greenLED, dutyCycle > 125 && analogRead(chargerInput) > 880);
+    digitalWrite(blueLED, dutyCycle > 230 && analogRead(chargerInput) > 880);
     
     //coulomb = ltc2941.getCoulombs();                                //reads charge in coulombs
     //mAh = ltc2941.getmAh();                                         //reads charge in mAh
