@@ -30,7 +30,7 @@ void setup(void)
     SERIAL.println("LTC2941 Raw Data");
     
     ltc2941.initialize();
-    ltc2941.setBatteryFullMAh(1000);
+    ltc2941.setBatteryFullMAh(1000, false);
 }
 
 void loop(void)
@@ -39,17 +39,22 @@ void loop(void)
     if (percent >= indexCount) {
       fastChargeLUT[indexCount] = timeCount;
       Serial.println(timeCount);
+      for(int i = 0; i < 101; i++) {
+        Serial.print(fastChargeLUT[i]);
+        Serial.print(", ");
+      }
+      Serial.print("\n");
       indexCount++;
     }
     if (percent >= 100) {
-      for(int i = 0; i < 101; i++)
-        {
-          Serial.print(fastChargeLUT[i]);
-        }
+      while(true) {
+        delay(10000);
+      }
     }
-    
-    SERIAL.print(percent);
-    SERIAL.println("%");
+    else {
+      SERIAL.print(percent);
+      SERIAL.println("%");
+    }
 
     timeCount++;
     delay(1000);
