@@ -28,7 +28,7 @@ int PWMpin = 4;                                                     //Pin 4 used
 int blueLED = 5;
 int greenLED = 6;
 int tempPin = A1;                                                   //TMP36's Analog Vout (Sense) pin is connected to pin A1 on Arduino
-int chargerInput = A3;
+int chargerInput = A4;
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
