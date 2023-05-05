@@ -1,5 +1,4 @@
 #include <Wire.h>                       //I2C library
-#include <EEPROM.h>                     //EEPROM editor library
 #include <RTClib.h>                     //RTC library
 #include "LTC2941.h"                    //Coulomb counter library
 #include "SPI.h"
@@ -14,7 +13,7 @@
     #define Serial Serial
 #endif
 
-#define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
+//#define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
 #define sensorPin A0
 
 #define YP A2                                                       //Have to be analog pins
@@ -35,12 +34,12 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 float coulomb = 0;
 float mAh = 0;
 float percent = 0;
+float percentTemp = 0;
 float prevBatteryTemp = 0;
 float currentBatteryTemp = 0;
 int dutyCycle;
 int dutyCycleTempLoss;                                              //Stores duty cycle decrease due to temperature limit
-int interruptCounter;
-bool fastCharge;
+bool fastCharge = 1;
 int8_t chargeLimit = 100;                                           //Sets default maximum battery percentage to 80%
 bool alarmEnabled;
 bool limitButton;
@@ -48,38 +47,30 @@ bool speedButton;
 
 RTC_DS1307 rtc;                                                     //Declares RTC object
 DateTime currentTime;
-uint8_t alarmHour;
-uint8_t alarmMinute;
+uint8_t alarmHour = 7;
+uint8_t alarmMinute = 25;
 bool isPM;
 String AMPM;
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
 
-uint16_t fastChargeLUT[101] = {    1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
-                                  10, , , , , , , , , ,
-                                  20, , , , , , , , , ,
-                                  30, , , , , , , , , ,
-                                  40, , , , , , , , , ,
-                                  50, , , , , , , , , ,
-                                  60, , , , , , , , , ,
-                                  70, , , , , , , , , ,
-                                  80, , , , , , , , , ,
-                                  90, , , , , , , , , ,}
+// uint16_t fastChargeLUT[101] = {    1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
+//                                   10, , , , , , , , , ,
+//                                   20, , , , , , , , , ,
+//                                   30, , , , , , , , , ,
+//                                   40, , , , , , , , , ,
+//                                   50, , , , , , , , , ,
+//                                   60, , , , , , , , , ,
+//                                   70, , , , , , , , , ,
+//                                   80, , , , , , , , , ,
+//                                   90, , , , , , , , , ,}
 
 void setup(void) {
+    tft.begin();
+    loadScreen();                                                   //Turns on screen
+
     TCCR0B = TCCR0B & B11111000 | B00000010;                        //Sets PWM switching frequency to 7812.5Hz for pins 4/13
     pinMode(PWMpin, OUTPUT);
-    analogReference(EXTERNAL);                                      //Need to set aref_voltage to 3.3V
-    noInterrupts();                                                 //Temporarily disables all interrupts
-    TCCR1A = 0;                                                     //Initializes 16-bit Timer1
-    TCCR1B = 0;
-    TCNT1  = 0;
-    OCR1A = 62500;                                                  //Sets Output Compare Register (16MHz clock/256 prescaler/1Hz timer)
-    TCCR1B |= (1 << WGM12);                                         //CTC mode clears timer when timer counter reaches OCR register value
-    TCCR1B |= (1 << CS12);                                          //Sets prescaler to 256
-    TIMSK1 |= (1 << OCIE1A);                                        //Enables timer compare interrupt
-    interrupts();                                                   //Enables all interrupts
-
     pinMode(blueLED, OUTPUT);
     pinMode(greenLED, OUTPUT);
 
@@ -90,66 +81,59 @@ void setup(void) {
     Serial.begin(115200);
     while (!Serial.available());
     ltc2941.initialize();
-    ltc2941.setBatteryFullMAh(1000);
-    
-    tft.begin();
-    loadScreen();                                                   //Turns on screen
+    ltc2941.setBatteryFullMAh(1000, false);
 }
 
 void loop(void) {
     TSPoint p = ts.getPoint();
     if (p.z > ts.pressureThreshhold) {
-        if (p.y > 295 && p.y < 400) {                               //Charge speed is being modified
+        if (p.y > 280 && p.y < 400) {                               //Charge speed is being modified
             if (p.x > 210 && p.x < 430 && fastCharge != 0) {
                 fastCharge = 0;
-                EEPROM.update(0, fastCharge);
-                dutyCycle = 149;
+                dutyCycle = 167;
                 analogWrite(PWMpin, dutyCycle);
                 showChargeSpeed();
+                delay(10000);
             }
-            else if (p.x > 550 && p.x < 820 && fastCharge != 1) {
+            else if (p.x > 500 && p.x < 830 && fastCharge != 1) {
                 fastCharge = 1;
-                EEPROM.update(0, fastCharge);
-                dutyCycle = 252;
+                dutyCycle = 255;
                 analogWrite(PWMpin, dutyCycle);
                 showChargeSpeed();
+                delay(10000);
             }
         }
-        else if (p.y > 580 && p.y < 680) {                          //Maximum charge limit is being modified
-            if (p.x > 230 && p.x < 280 && chargeLimit > 0) {
+        else if (p.y > 540 && p.y < 680) {                          //Maximum charge limit is being modified
+            if (p.x > 200 && p.x < 390 && chargeLimit > 0) {
                 setChargeLimit(-5);
             }
-            else if (p.x > 745 && p.x < 805 && chargeLimit < 100) {
+            else if (p.x > 640 && p.x < 840 && chargeLimit < 100) {
                 setChargeLimit(5);
             }
         }
-        else if (p.y > 700 && p.y < 770 && p.x > 750 && p.x < 830){
+        else if (p.y > 690 && p.y < 780 && p.x > 750 && p.x < 830){
             toggleAlarm();
         }
-        else if (p.y > 835 && p.y < 880 && p.x > 535 && p.x < 830) {
+        else if (p.y > 820 && p.y < 890 && p.x > 490 && p.x < 880) {
             setAlarm();
         }
     }
-
-    digitalWrite(greenLED, dutyCycle > 125 && analogRead(chargerInput) > 880);
-    digitalWrite(blueLED, dutyCycle > 230 && analogRead(chargerInput) > 880);
+    digitalWrite(greenLED, dutyCycle > 125 && analogRead(chargerInput) > 1000);
+    digitalWrite(blueLED, dutyCycle > 230 && analogRead(chargerInput) > 1000);
     
-    //coulomb = ltc2941.getCoulombs();                                //reads charge in coulombs
-    //mAh = ltc2941.getmAh();                                         //reads charge in mAh
-    //percent = ltc2941.getPercent();                                 //reads battery percentage
-    //setAlarm();                                                     //set the alarm
-    //getBatteryTemp(void);                                           //get the battery temperature
-    //setChargeSpeed();                                               //set the charge speed
-    //setMaxChargeLimit();                                            //set the charge capacity
-}
 
-ISR(TIMER1_COMPA_vect) {                                            //Timer1 compare interrupt service routine
-    if (++interruptCounter %= 5) {
         percent = ltc2941.getPercent();                             //call print/updateBatteryPercentage function - only update if it changes
-        if (percent >= chargeLimit) {
-            analogWrite(PWMpin, 0);
-        }
+        Serial.print(percent);
+        Serial.print("%, Charge Limit: ");
+        Serial.print(chargeLimit);
+        Serial.println("%");
+        if (percent - percentTemp < 1) {
+         if (percent >= chargeLimit) {
+             analogWrite(PWMpin, 0);
+         }
+         percentTemp = percent;
         showBatteryPercentage();
+        }
 
         currentBatteryTemp = getBatteryTemp();                      //Reads current battery temperature
         if (currentBatteryTemp > 45) {
@@ -163,21 +147,12 @@ ISR(TIMER1_COMPA_vect) {                                            //Timer1 com
             }
         }
         prevBatteryTemp = currentBatteryTemp;
-    }
 }
 
 void loadScreen() {                                                 //Initializes screen upon Arduino startup
     tft.fillScreen(ILI9341_WHITE);
     tft.setTextColor(ILI9341_BLACK);
     tft.setTextSize(3);
-
-    fastCharge = EEPROM.read(0);
-    chargeLimit = EEPROM.read(1);
-    alarmEnabled = EEPROM.read(2);
-    alarmHour = (EEPROM.read(3) + 11) % 12 + 1;
-    alarmMinute = EEPROM.read(4);
-
-    showBatteryPercentage();
 
     uint8_t rotation = 0;                                           //Sets screen orientation to portrait and prints screen
     tft.setRotation(rotation);
@@ -191,8 +166,7 @@ void loadScreen() {                                                 //Initialize
     tft.setCursor(195, 80);
     tft.print("Fast");
     tft.drawRect(20, 90, 200, 30, ILI9341_BLACK);                   //Draws a black rectangle to outline where the slider goes
-    tft.fillRect(20,90,100,30,ILI9341_GREEN);
-    tft.fillRect(120,90,100,30,ILI9341_BLUE);
+    showChargeSpeed();
 
     tft.setCursor(40,145);                                          //Prints maximum charge setting
     tft.setTextSize(2);
@@ -235,20 +209,27 @@ void loadScreen() {                                                 //Initialize
     tft.setTextSize(2);
     tft.print("Set Alarm");
     tft.drawRect(115, 290, 120 , 23, ILI9341_BLACK);
+
+    showBatteryPercentage();
 }
 
 void calculateTimeDiff() {
     currentTime = rtc.now();
     alarmHourDiff = ((alarmHour >= currentTime.hour() ? 0 : 24) + alarmHour - currentTime.hour() - (alarmMinute < currentTime.minute() ? 1 : 0) + 24) % 24;
     alarmMinuteDiff = (alarmMinute >= currentTime.minute() ? 0 : 60) + alarmMinute - currentTime.minute();
+
+    Serial.print(alarmHourDiff);
+    Serial.print("hr ");
+    Serial.print(alarmMinuteDiff);
+    Serial.println("min left\n");
+    delay(30000);
 }
 
 void toggleAlarm(){
     alarmEnabled ^= 1;
-    EEPROM.update(2, alarmEnabled);
     tft.fillCircle(200, 255, 10, (alarmEnabled ? ILI9341_GREEN : ILI9341_WHITE));
     tft.drawCircle(200, 255, 10, ILI9341_BLACK);
-    delay(200);
+    delay(2000);
 }
 
 void setAlarm() {
@@ -291,15 +272,18 @@ void setAlarm() {
     tft.print(AMPM);
 
     setAlarmHour();
+    setAlarmMinute();
+    loadScreen();
+    calculateTimeDiff();
 }
 
 void setAlarmHour() {
-    bool alarmSet = false;
-    while (alarmSet == false) {
+    bool hourSet = false;
+    while (hourSet == false) {
         TSPoint p = ts.getPoint();
         if (p.z > ts.pressureThreshhold) {
-            if (p.y > 580 && p.y < 680) {
-                if (p.x > 230 && p.x < 280) {
+            if (p.y > 540 && p.y < 680) {
+                if (p.x > 190 && p.x < 370) {
                     tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
                     tft.setCursor(30, 195);
                     tft.setTextSize(3);
@@ -312,7 +296,7 @@ void setAlarmHour() {
                     tft.fillRect(91, 181, 58, 48, ILI9341_WHITE);   //Don't change this (note to self)
                     alarmHour = (alarmHour + 11) % 12;
                 }
-                else if (p.x > 745 && p.x < 805) {
+                else if (p.x > 640 && p.x < 840) {
                     tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
                     tft.setCursor(175, 195);
                     tft.setTextSize(3);
@@ -333,19 +317,18 @@ void setAlarmHour() {
                 }
                 tft.print(alarmHour);
             }
-            else if (p.y > 735 && p.y < 830) {
-                if (p.x > 160 && p.x < 500) {
-                    alarmSet = true;
+            else if (p.y > 740 && p.y < 820) {
+                if (p.x > 180 && p.x < 510) {
+                    hourSet = true;
                 }
-                else if (p.x > 590 && p.x < 890) {
+                else if (p.x > 540 && p.x < 880) {
+                    isPM ^= 1;
                     toggleAMPM();
                 }
             }
         }
+        delay(1000);
     }
-    //Startup();
-    EEPROM.update(3, (alarmHour % 12) + isPM * 12);
-    setAlarmMinute();
 }
 
 void setAlarmMinute() {
@@ -354,25 +337,27 @@ void setAlarmMinute() {
     tft.setCursor(30, 145);
     tft.setTextSize(2);
     tft.print("Set Alarm Minute");
-    // tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
+    tft.drawRect(90, 180, 60, 50, ILI9341_BLACK);
     tft.setTextSize(3);
     tft.setCursor(110, 195);
     tft.print(alarmMinute);
-    // tft.setCursor(30, 195);
-    // tft.print("-1");
-    // tft.setCursor(175, 195);
-    // tft.print("+1");
+    tft.setCursor(30, 195);
+    tft.print("-1");
+    tft.setCursor(175, 195);
+    tft.print("+1");
     tft.drawRect(70, 260, 100, 28, ILI9341_BLACK);                  //Prints SET button
     tft.setCursor(95, 262);
     tft.setTextSize(3);
     tft.print("SET");
+    delay(2000);
 
-    bool alarmSet = false;
-    while (alarmSet = false) {
+    bool minuteSet = false;
+    Serial.println(minuteSet);
+    while (minuteSet == false) {
         TSPoint p = ts.getPoint();
         if (p.z > ts.pressureThreshhold) {
-            if (p.y > 580 && p.y < 680) {
-                if (p.x > 230 && p.x < 280) {
+            if (p.y > 540 && p.y < 680) {
+                if (p.x > 190 && p.x < 370) {
                     tft.fillRect(30, 195, 35, 28, ILI9341_LIGHTGREY);
                     tft.setCursor(30, 195);
                     tft.setTextSize(3);
@@ -385,7 +370,7 @@ void setAlarmMinute() {
                     tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
                     alarmMinute = (alarmMinute + 59) % 60;                    
                 }
-                else if (p.x > 745 && p.x < 805) {
+                else if (p.x > 640 && p.x < 840) {
                     tft.fillRect(175, 195, 35, 28, ILI9341_LIGHTGREY);
                     tft.setCursor(175, 195);
                     tft.setTextSize(3);
@@ -407,20 +392,21 @@ void setAlarmMinute() {
                 }
                 tft.print(alarmMinute);
             }
-            else if (p.y > 735 && p.y < 830 && p.x > 350 && p.x < 620) {
-                alarmSet = true;
+            else if (p.y > 750 && p.y < 830 && p.x > 340 && p.x < 680) {
+                minuteSet = true;
             }
         }
+        delay(1000);
     }
-
-    EEPROM.update(4, alarmMinute);
-    loadScreen();
+    Serial.println(minuteSet);
+    delay(1000);
 }
 
 void toggleAMPM() {
     AMPM = isPM ? "PM" : "AM";
     tft.fillRect(0, 290, 240, 30, ILI9341_WHITE);
     tft.setCursor(110, 290);
+    tft.setTextSize(2);
     tft.print("Set to:");
     tft.print(AMPM);
     delay(200);
@@ -428,10 +414,10 @@ void toggleAMPM() {
 
 float getBatteryTemp() {
     int tempReading = analogRead(tempPin);                          //Reads in and converts TMP36's Vout to int between 0-1023
-    float tempVoltage = (tempReading * aref_voltage) / 1023.0;      //Converts Vout from int to voltage between 0-3.3V
+    float tempVoltage = (tempReading * 5.0) / 1023.0;               //Converts Vout from int to voltage between 0-5.0V
     float tempC = (tempVoltage - 0.5) * 100;                        //Converts voltage to °C with 10mV/°C and 500mV offset
-    Serial.print(tempC);
-    Serial.println("°C");
+    //Serial.print(tempC);
+    //Serial.println("°C");
     return tempC;
 }
 
@@ -455,7 +441,7 @@ void setChargeLimit(int8_t percentChange) {
         tft.setCursor(175, 195);
         tft.setTextSize(3);
         tft.print("+5");
-        delay(300);
+        delay(2000);
         tft.fillRect(175, 195, 35, 28, ILI9341_WHITE);
         tft.setCursor(175, 195);
         tft.setTextSize(3);
@@ -467,7 +453,7 @@ void setChargeLimit(int8_t percentChange) {
         tft.setCursor(30, 195);
         tft.setTextSize(3);
         tft.print("-5");
-        delay(300);
+        delay(2000);
         tft.fillRect(30, 195, 35, 28, ILI9341_WHITE);
         tft.setCursor(30, 195);
         tft.setTextSize(3);
@@ -475,7 +461,6 @@ void setChargeLimit(int8_t percentChange) {
         tft.fillRect(91, 181, 58, 48, ILI9341_WHITE); //Don't change this (note to self)
     }
     chargeLimit += percentChange;
-    EEPROM.update(1, chargeLimit);
     if (chargeLimit == 100) {
         tft.setCursor(95, 195);
     }
