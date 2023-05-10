@@ -13,7 +13,6 @@
     #define Serial Serial
 #endif
 
-//#define aref_voltage 3.3                                            //ARef pin is tied to 3.3V to decrease noise in TMP36 temperature reading
 #define sensorPin A0
 
 #define YP A2                                                       //Have to be analog pins
@@ -41,7 +40,7 @@ int dutyCycle;
 int dutyCycleTempLoss;                                              //Stores duty cycle decrease due to temperature limit
 bool fastCharge = 1;
 int8_t chargeLimit = 100;                                           //Sets default maximum battery percentage to 80%
-bool alarmEnabled;
+bool alarmEnabled = false;
 bool limitButton;
 bool speedButton;
 
@@ -49,21 +48,10 @@ RTC_DS1307 rtc;                                                     //Declares R
 DateTime currentTime;
 uint8_t alarmHour = 7;
 uint8_t alarmMinute = 25;
-bool isPM;
+bool isPM = true;
 String AMPM;
 uint8_t alarmHourDiff;
 uint8_t alarmMinuteDiff;
-
-// uint16_t fastChargeLUT[101] = {    1,     1,     1,     1,     1,     1,     1,     1,     1,     1,
-//                                   10, , , , , , , , , ,
-//                                   20, , , , , , , , , ,
-//                                   30, , , , , , , , , ,
-//                                   40, , , , , , , , , ,
-//                                   50, , , , , , , , , ,
-//                                   60, , , , , , , , , ,
-//                                   70, , , , , , , , , ,
-//                                   80, , , , , , , , , ,
-//                                   90, , , , , , , , , ,}
 
 void setup(void) {
     tft.begin();
@@ -131,19 +119,17 @@ void loop(void) {
          if (percent >= chargeLimit) {
              analogWrite(PWMpin, 0);
          }
-         percentTemp = percent;
+        percentTemp = percent;
         showBatteryPercentage();
         }
 
         currentBatteryTemp = getBatteryTemp();                      //Reads current battery temperature
         if (currentBatteryTemp > 45) {
             if (currentBatteryTemp >= prevBatteryTemp) {            //If battery temp exceeds 45°C limit and is not decreasing
-                //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - ++dutyCycleTempLoss);   //Decrease PWM duty cycle/charging current and record that duty cycle has been temporarily decreased
             }
         }
         else {
             if (dutyCycleTempLoss > 0) {                            //If battery temp is under 45°C limit and duty cycle has been temporarily decreased
-                //analogWrite(PWMpin, dutyCycle[getBatteryPercent] - --dutyCycleTempLoss);   //Increase duty cycle until it is reaches normal values
             }
         }
         prevBatteryTemp = currentBatteryTemp;
