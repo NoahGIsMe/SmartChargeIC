@@ -126,13 +126,18 @@ void loop(void) {
         currentBatteryTemp = getBatteryTemp();                      //Reads current battery temperature
         if (currentBatteryTemp > 45) {
             if (currentBatteryTemp >= prevBatteryTemp) {            //If battery temp exceeds 45°C limit and is not decreasing
+                analogWrite(PWMpin, --dutyCycle);
+                dutyCycleTempLoss++;
             }
         }
         else {
             if (dutyCycleTempLoss > 0) {                            //If battery temp is under 45°C limit and duty cycle has been temporarily decreased
+                analogWrite(PWMpin, ++dutyCycle);
+                dutyCycleTempLoss--;
             }
         }
         prevBatteryTemp = currentBatteryTemp;
+        delay(500);
 }
 
 void loadScreen() {                                                 //Initializes screen upon Arduino startup
